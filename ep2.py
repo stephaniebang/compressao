@@ -52,59 +52,39 @@ def mult(matriz1, matriz2):
 	
 	return prod
 
-def tridiag(matriz):
+def iteracao(matriz, e, maximo):
 	'''
-	A funcao recebe uma matriz simetrica e a tridiagonaliza por decomposicao QR com rotacao de Givens
+	A funcao recebe uma matriz, um numero e e um numero maximo. A funcao ira realizar metodo QR ate os componentes da matriz abaixo da diagonal
+	terem valor menor que e ou a quantidade de iteracoes alcancar maximo e retorna U = Q1 * Q2 * ... com os autovetores aproximados da matriz
+	'''
+	Q, R = linalg.qr(A)
+	U = Q
+	cont = 1
+	
+	while (checa(matriz, e) and cont < maximo):
+		Q, R = linalg.qr(matriz)
+		matriz = mult(R, Q)
+		U = mult(U, Q)
+		cont += 1
+	
+	return U
+
+def checa(matriz, e):
+	'''
+	A funcao recebe uma matriz e um numero e e retorna False se todos os elementos da matriz abaixo da diagonal sao menores que e e retorna False 
+	caso contrario
 	'''
 	cont = 0
+	j = 1
 	
-	for j in range (len(matriz[0]) - 2):
-		i = 1 + cont
-	
-		while (i < len(matriz[0]) - 1):
-			givens(matriz, (i, j))
-			i += 1
-		cont += 1
-
-def givens(matriz, (x, y)):
-	'''
-	A funcao recebe uma matriz e as coordenadas de um ponto nela e zera o ponto localizado abaixo por rotacao de Givens
-	'''
-	c = math.sqrt(matriz[x][y] ** 2.0 / (matriz[x][y] ** 2 + matriz[x + 1][y] ** 2))
-	s = math.sqrt(matriz[x + 1][y] ** 2.0 / (matriz[x][y] ** 2 + matriz[x + 1][y] ** 2))
-	
-	if ((matriz[x][y] > 0 and matriz[x+1][y] > 0) or (matriz[x][y] < 0 and matriz[x+1][y] < 0)):
-		s *= -1
-	for i in range (len(matriz[0])):
-		cima = matriz[x][i]				# copia do ponto (x, i)
-		baixo = matriz[x + 1][i]			# copia do ponto (x + 1, i)
-		matriz[x][i] = cima * c - baixo * s
-		matriz[x + 1][i] = cima * s + baixo * c
-
-def qr(A):
-    m, n = np.shape(A)
-    Q = np.eye(m)
-    for i in range(n - (m == n)):
-        H = np.eye(m)
-        H[i:][i:] = make_householder(A[i:][i])
-        Q = np.dot(Q, H)
-        A = np.dot(H, A)
-    return Q, A
- 
-def make_householder(a):
-    v = a / (a[0] + np.copysign(np.linalg.norm(a), a[0]))
-    v[0] = 1
-    H = np.eye(np.shape(a[0]))
-    H -= (2 / np.dot(v, v)) * np.dot(v[:, None], v[None, :])
-    return H
-    
-def iteracao(A,k):
-	for i in range(k):
-		Q,R=linalg.qr(A)
+	for i in range (len(matriz[0]) - 1):
+		j += cont
 		
-		A=mult(R,Q)
-	
-	return A
+		while (j < len(matriz)):
+			if (matriz[i][j] > e):
+				return True
+		
+	return False
 
 def SVD(A, diag, k):
 	V = []
@@ -121,20 +101,23 @@ def SVD(A, diag, k):
 
 def soma(matriz1, matriz2):
 	'''
-	Soma matriz
+	A funcao recebe a matriz1 e a matriz2 e retorna a soma das matrizes
 	'''
 	soma = []
 	for i in range (len(matriz1)):
 	 	lin = []
 	 	
 	 	for j in range (len(matriz1)):
-	 		lin.append(matriz1[i][j]+matriz2[i][j])
+	 		lin.append(matriz1[i][j] + matriz2[i][j])
 	 	
 	 	soma.append(lin)
 	
 	return soma
 	
 def multvetor(col,lin):
+	'''
+	A funcao recebe um vetor col e um vetor lin e retorna a multiplicacao col x lin
+	'''
 	mult = []
 	
 	for i in range(len(col)):
@@ -148,31 +131,64 @@ def multvetor(col,lin):
 	return mult
 
 def multrealvetor(vetor, real):
+	'''
+	A funcao recebe um vetor e um real e multiplica o vetor pelo real
+	'''
 	for i in range(len(vetor)):
 		vetor[i] *= real
+
+def decres(vetor, matriz):
+	'''
+	A funcao recebe um vetor com autovalores e uma matriz com autovetores correspondentes e torna a sequencia dos componentes no vetor
+	decrescente, trocando a ordem dos autovetores da matriz de modo a acompanhar os autovalores 
+	'''
+	vdecres = [-1 for i in range(len(vetor))]
+	vposicao = [i for i in range(len(vetor))]
+	
+	for i in range (len(vetor)):
+		j = len(vetor) - 1
+		
+		if (abs(vetor[i]) >= vdecres[j]):
+			while (vetor[i] >= vdecres[j] and j >= 0):
+				j -= 1
+			
+			substitui(vdecres, vetor[i], j + 1)
+			substitui(matriz, matriz[i], j + 1)
+
+def substitui(lista, valor, posicao):
+	'''
+	A funcao recebe uma lista, um valor (que pode ser uma lista) e uma posicao e ela adiciona o valor a lista na posicao, excluindo o valor
+	da ultima posicao da lista
+	'''
+	copia = vetor
+	vetor[posicao] = valor
+	
+	for i in range (posicao + 1; i < len(vetor); 1):
+		vetor[i] = copia[i - 1]
+
 
 ####################
 # Funcao principal #
 ####################
 
 def main():
-	k=int(input('Digite o valor de k: '))
-	t = [[1,1,2, 7], [0, -1, 5, 1]]
-
+	k = int(input('Digite o valor de k: '))
+	
 	A = matrizDaImagem('google.png', 'L')
 	At = transposta(A)
 	AtA = mult(At, A)
-	B=iteracao(AtA,k)
+	U = iteracao(AtA, 0.001, 15)
+	Ut = transposta(U)
+	
 	diag = []
+	
 	for i in range(len(B[0])):	
 		diag.append(B[i][i])
-	print(len(diag))
-	sorted(diag, key=abs, reverse=True)
+	
+	decres(diag, Ut)
 	
 	V = SVD(A, diag, k)
-	Vt = transposta(V)
 	
-	U = []
 	imagem = []
 	lin = []
 	
@@ -183,8 +199,6 @@ def main():
 		U.append(0)
 		imagem.append(lin)
 	
-		
-	
 	for i in range (k): 
 		U[i] = 1
 		multrealvetor(U, math.sqrt(abs(diag[i])))
@@ -193,7 +207,7 @@ def main():
 		imagem = soma(imagem, uv)
 	
 	pil_im = Image.fromarray(uint8(imagem))
-	pil_im.save("your_file.png")
+	pil_im.save("comprimida.png")
 	
 	'''	
 	from matplotlib import pyplot as plt
