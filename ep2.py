@@ -17,7 +17,23 @@ def matrizDaImagem(nome, tipo):
 	Imagens RGB tem matriz m x n x 3, sendo o numero 3 correnspondente aos componentes vermelho, verde e azul da imagem 
 	'''
 	return np.asarray(Image.open(nome).convert(tipo))
+
+def matrizXvetor(A, b):
+	'''
+	A funcao retorna o produto da matriz com o vetor (coluna)
+	'''
+	v = []
 	
+	for i in range(len(A)):
+		s = 0
+		
+		for j in range(len(A[0])):
+			s += A[i][j] * b[j]
+	
+		v.append(s)
+	
+	return v
+
 def transposta(matriz):
 	'''
 	A funcao recebe uma matriz e retorna a sua transposta
@@ -57,7 +73,7 @@ def iteracao(matriz, e, maximo):
 	A funcao recebe uma matriz, um numero e e um numero maximo. A funcao ira realizar metodo QR ate os componentes da matriz abaixo da diagonal
 	terem valor menor que e ou a quantidade de iteracoes alcancar maximo e retorna U = Q1 * Q2 * ... com os autovetores aproximados da matriz
 	'''
-	Q, R = linalg.qr(A)
+	Q, R = linalg.qr(matriz)
 	U = Q
 	cont = 1
 	
@@ -83,19 +99,22 @@ def checa(matriz, e):
 		while (j < len(matriz)):
 			if (matriz[i][j] > e):
 				return True
+			
+			j += 1
 		
 	return False
 
-def SVD(A, diag, k):
+def SVD(A, U, diag, k):
+	'''
+	A funcao retorna V da SVD, dados A, U e os valores singulares
+	'''
 	V = []
 	
-	for i in range (k):
-		col=[]
-		for j in range (len(A)):
-			col.append(A[i][j])
-		if (diag[i] != 0):
-			multrealvetor(col, 1/math.sqrt(abs(diag[i])))
-		V.append(col)
+	for i in range(len(A)):
+		multrealvetor(A[i], 1.0 / math.sqrt(diag[i]))
+	
+	for i in range(k):
+		V.append(matrizXvetor(A, [row[i] for row in U]))
 	
 	return V
 
@@ -173,46 +192,45 @@ def substitui(lista, valor, posicao):
 
 def main():
 	k = int(input('Digite o valor de k: '))
+	nome = 'google'						# imagem tem m x n pixels
 	
-	A = matrizDaImagem('google.png', 'L')
-	At = transposta(A)
-	AtA = mult(At, A)
-	U = iteracao(AtA, 0.001, 15)
-	Ut = transposta(U)
+	A = matrizDaImagem(nome + '.png', 'L')		# A = m x n
+	A.tolist()
+	At = transposta(A.tolist())
+	AtA = mult(At, A.tolist())
+	
+	print('Funcao iteracao')
+	U = iteracao(AtA, 0.001, 15)				# U = m x n
 	
 	diag = []
 	
-	for i in range(len(B[0])):	
-		diag.append(B[i][i])
+	for i in range(len(AtA[0])):
+		diag.append(AtA[i][i])
 	
-	decres(diag, Ut)
+	print('Funcao decres')
+	decres(diag, U)
 	
-	V = SVD(A, diag, k)
+	print('Funcao SVD')
+	V = SVD(A.tolist(), U, diag, k)			# V = k x n
 	
 	imagem = []
 	lin = []
 	
-	for i in range(k):
+	for i in range (len(A[0])):
 		lin.append(0)
 	
-	for i in range (k):
-		U.append(0)
+	for i in range (len(A)):
 		imagem.append(lin)
 	
+	print('Finalmente obtendo a matriz da imagem comprimida :)')
 	for i in range (k): 
-		U[i] = 1
-		multrealvetor(U, math.sqrt(abs(diag[i])))
-		uv = multvetor(U, Vt[i])
-		
-		imagem = soma(imagem, uv)
+		multrealvetor(U[i], math.sqrt(abs(diag[i])))
+		uv = multvetor(V[i], U[i])
+		imagem = somaMatriz(imagem, uv)
 	
-	pil_im = Image.fromarray(uint8(imagem))
-	pil_im.save("comprimida.png")
-	
-	'''	
-	from matplotlib import pyplot as plt
-	plt.imshow(arr, interpolation='nearest')
-	plt.show()
-	'''
+	npimagem = np.matrix(imagem)
+	plt.imsave(nome + "comprimida.png", npimagem, cmap = 'gray')
+
+	print('Imagem comprimida salva como ' + nome + 'comprimida.png')
 	
 main()
