@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 import scipy.linalg
+from matplotlib import pyplot as plt
 
 def imagetomatrix(nome, tipo):
 	'''
@@ -10,11 +11,8 @@ def imagetomatrix(nome, tipo):
 	'''
 	return np.asarray(Image.open(nome).convert(tipo))
 #-------------------------------------------------------------------------------
-def matrixtoimage(matriz, tipo):
-	nome=np.array(matriz)
-	img = Image.fromarray(nome, tipo)
-	img.save('comprimida.png')
-	img.show()
+def matrixtoimage(matriz, nome, tipo):
+	plt.imsave(nome + "comprimida.png", np.matrix(matriz), cmap = 'gray')
 #-------------------------------------------------------------------------------
 def transposta(matriz):
 	'''
@@ -103,26 +101,38 @@ def qr(matriz):
 	Q, R = scipy.linalg.qr(matriz)
 	return Q,R
 #-------------------------------------------------------------------------------
-def iteracao(matriz,e):
+def iteracao(matriz,e,maximo):
 	Q,R=qr(matriz)
 	U=Q
-	for i in range(int(1/e)):
+	i = 1
+	An=mult(R,Q)
+	while(checa(An, e) and i <= maximo):
 		An=mult(R,Q)
 		Q,R=qr(An)
 		U=mult(U,Q)
+		i += 1
 	return U,An
+#-------------------------------------------------------------------------------
+def checa(matriz, e):
+	'''
+	A funcao recebe uma matriz e um numero e e retorna False se todos os elementos da matriz abaixo da diagonal sao menores que e e retorna True 
+	caso contrario
+	'''
+	cont = 0
+	j = 1
+	for i in range (len(matriz[0]) - 1):
+		j += cont
+		while (j < len(matriz)):
+			if (abs(matriz[i][j]) > e):
+				return True
+			j += 1
+	return False
 #-------------------------------------------------------------------------------
 def autovalores(matriz):
 	eigenvalures=[]
 	for i in range(len(matriz[0])):
 		eigenvalures.append(matriz[i][i])
 	return eigenvalures
-#-------------------------------------------------------------------------------
-def autovetores(matriz):
-	eigenvectors=[]
-	for i in range(len(matriz[0])):
-		eigenvectors.append([matriz[0][i],matriz[1][i],matriz[2][i]])
-	return eigenvectors
 #-------------------------------------------------------------------------------
 def organiza(evc,evl):
 	n=len(evl)
@@ -150,7 +160,7 @@ def svd(M,eigenvalures,eigenvectors):
 		p=matrizvetor(M,eigenvectors[i])
 		p=escalarvetor(1/((eigenvalures[i])**(1/2)),p)
 		V.append(p)
-	return V,eigenvalures,eigenvectors
+	return V
 #-------------------------------------------------------------------------------
 def normaliza(eigenvectors):
 	for i in range(len(eigenvectors)):
@@ -165,20 +175,18 @@ def normaliza(eigenvectors):
 def main():
 	nome=str(input('Digite o nome da imagem:'))
 	k = int(input('Digite o valor de k: '))
-	A=imagetomatrix(nome+'.png', 'L')
-	A.tolist()
+	A=imagetomatrix(nome+'.png', 'L').tolist()
 	At=transposta(A)
 	AtA=mult(At,A)
 	print("Achando auto-valores e auto-vetores")
-	U,An=iteracao(AtA,0.0001)
+	U,An=iteracao(AtA,0.0001,15)
 	eigenvalures=autovalores(An)
 	eigenvectors=autovetores(U)
 	print("Organizando em ordem decrescente")
 	eigenvectors2,eigenvalures2=organiza(eigenvectors,eigenvalures)
-	eigenvectors2=normaliza(eigenvectors2)
 	print("Fazendo a SVD e gerando a imagem")
-	V,eigenvalures2,eigenvectors2=svd(A,eigenvalures2,eigenvectors2)
+	V=svd(A,eigenvalures2,eigenvectors2)
 	A=imagem(eigenvalures,eigenvectors,V,k)
-	matrixtoimage(A,'L')
+	matrixtoimage(A,nome,'L')
 
 main()
